@@ -1,0 +1,53 @@
+services:
+  api: &main_app
+    build:
+      context: .
+      target: dev
+      dockerfile: ./Dockerfile
+    image: promptune:${PROMPTUNE_VERSION:-latest}
+    restart: always
+    ports:
+      # Exposes application port.
+    - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    environment:
+      PROMPTUNE_HOST: 0.0.0.0
+      PROMPTUNE_RELOAD: "True"
+      PROMPTUNE_DB_FILE: /db_data/db.sqlite3
+      PROMPTUNE_REDIS_HOST: promptune-redis
+    volumes:
+      - .:/app/src/
+      - promptune-db-data:/db_data/
+
+  migrator:
+    <<: *main_app
+    restart: "no"
+    command: alembic upgrade head
+    depends_on: {}
+
+  redis:
+    image: redis:8.4.0
+    hostname: "promptune-redis"
+    restart: always
+    ports:
+      - 6379:6379
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
+    healthcheck:
+      test: redis-cli ping
+      interval: 1s
+      timeout: 3s
+      retries: 50
+
+
+
+volumes:
+  promptune-db-data:
+    name: promptune-db-data
