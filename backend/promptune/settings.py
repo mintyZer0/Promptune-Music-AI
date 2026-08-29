@@ -1,8 +1,8 @@
 import enum
 import os
-from pathlib import Path
+from pathlib import Path 
 from tempfile import gettempdir
-
+from pydantic import Field, AliasChoices
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from yarl import URL
 
@@ -27,6 +27,15 @@ class Settings(BaseSettings):
     These parameters can be configured
     with environment variables.
     """
+    gemini_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "gemini_api_key",
+            "GEMINI_API_KEY",
+            "PROMPTUNE_GEMINI_API_KEY",
+        )
+    )
+    
 
     host: str = "127.0.0.1"
     port: int = 8000
