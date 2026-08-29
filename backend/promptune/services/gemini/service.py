@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from datetime import date
 from typing import Optional
 from promptune.settings import settings
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 class Playlist(BaseModel):
     playlist_name: str = "playlist"
@@ -37,10 +37,14 @@ class GeminiService:
             model="gemini-3.6-flash",
             config=self.config 
         )
-        response = await chat.send_message(prompt)
+        try:
+            response = await chat.send_message(prompt)
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Gemini request failed {e}")
 
         if isinstance(response.parsed, Playlist):
             return response.parsed
-        raise HTTPException(status_code=500, detail="Failed to parse into playlist")
+        else:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to parse into playlist")
 
 
