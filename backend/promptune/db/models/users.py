@@ -10,15 +10,24 @@ from fastapi_users.authentication import (
     JWTStrategy,
 )
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
+from sqlalchemy import (
+    String,
+    Integer,
+    ForeignKey
+)
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy.orm import Mapped, mapped_column
 from promptune.db.base import Base
 from promptune.db.dependencies import get_db_session
 from promptune.settings import settings
-
+from typing import Optional
 
 class User(SQLAlchemyBaseUserTableUUID, Base):
     """Represents a user entity."""
+    subsonic_server_url: Mapped[str] = mapped_column(String(500), nullable=False)
+    subsonic_username: Mapped[str] = mapped_column(String(255), nullable=False)
+    subsonic_token: Mapped[str] = mapped_column(String(255), nullable=False)
+    subsonic_salt: Mapped[str] = mapped_column(String(255), nullable=False)
 
 
 class UserRead(schemas.BaseUser[uuid.UUID]):
