@@ -1,9 +1,9 @@
 from typing import Optional
 import secrets
 import hashlib
-from httpx import AsyncClient, RequestError
+from httpx import AsyncClient, RequestError, Response
 from pydantic import BaseModel
-
+from fastapi import HTTPException, status
 class SubsonicLoginDTO(BaseModel):
     server_url: str
     username: str
@@ -42,10 +42,11 @@ class SubsonicClient:
     async def ping(self):
         ping_params =  self.__build_params(self.username,self.token,self.salt)
         url = f"{self.server_url}/rest/ping.view"
-        try:
-            async with AsyncClient() as client:
-                response = await client.get(url, params=ping_params, timeout=5.0)
-                return response
-        except RequestError as e:
-            print(f"Network error or server unreachable: {e}")
-
+        async with AsyncClient() as client:
+            response = await client.get(url, params=ping_params, timeout=5.0)
+            data = response.json()
+            response_status = data.get("subsonic-response", {}).get("status", {})
+            if response_status == "ok":
+                return True
+            else:
+                return False

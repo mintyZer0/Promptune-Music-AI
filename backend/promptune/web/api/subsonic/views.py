@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException,  status
 from promptune.services.subsonic import SubsonicClient, SubsonicLoginDTO
+from httpx import RequestError
 
 router = APIRouter()
 
@@ -11,14 +12,19 @@ async def login(payload:SubsonicLoginDTO):
         payload.username,
         payload.password
         )
-    response = await client.ping()
+    try:
+        is_valid = await client.ping()
 
-    if not response:
+    except RequestError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Could not connect to subsonic server."
+            detail=f"Could not connect to subsonic server. {e}"
         )
 
-    return {
-        "status":"success"
-    }
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password"
+        )
+    
+       
