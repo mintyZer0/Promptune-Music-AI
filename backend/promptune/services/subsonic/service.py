@@ -2,6 +2,12 @@ from typing import Optional
 import secrets
 import hashlib
 from httpx import AsyncClient, RequestError
+from pydantic import BaseModel
+
+class SubsonicLoginDTO(BaseModel):
+    server_url: str
+    username: str
+    password: str
 
 
 class SubsonicClient:
@@ -35,7 +41,7 @@ class SubsonicClient:
 
     async def ping(self):
         ping_params =  self.__build_params(self.username,self.token,self.salt)
-        url = f"self.server_url/rest/ping.view"
+        url = f"{self.server_url}/rest/ping.view"
         try:
             async with AsyncClient() as client:
                 response = await client.get(url, params=ping_params, timeout=5.0)

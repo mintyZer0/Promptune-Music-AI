@@ -1,4 +1,4 @@
-"""Gemini service packags"""
+"""Gemini service packages"""
 
 from promptune.services.gemini.service import GeminiService, Playlist, Track
 
