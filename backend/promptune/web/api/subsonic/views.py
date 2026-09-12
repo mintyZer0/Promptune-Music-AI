@@ -1,13 +1,9 @@
 from fastapi import APIRouter, HTTPException,  status, Depends
 from promptune.services.subsonic import SubsonicClient, SubsonicLoginDTO
 from httpx import RequestError
-from sqlalchemy import select
 from promptune.db.models.users import auth_cookie, get_jwt_strategy
 
-from promptune.db.dependencies import get_db_session
 from promptune.db.dao.user_dao import UserDAO
-from promptune.db.models.users import User
-
 router = APIRouter()
 
 
