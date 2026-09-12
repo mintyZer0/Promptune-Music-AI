@@ -8,7 +8,7 @@ from promptune.db.models.users import User
 from typing import Optional
 
 class UserDAO:
-    """Class for accessing dummy table."""
+    """Class for accessing User."""
 
     def __init__(self, session: AsyncSession = Depends(get_db_session)) -> None:
         self.session = session
@@ -19,12 +19,14 @@ class UserDAO:
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def create_user(self, server_url:str, username:str, token:str, salt:str) -> None:
+    async def create_user(self, server_url:str, username:str, token:str, salt:str, email:str, hashed_password:str) -> None:
         new_user = User(
             subsonic_server_url=server_url,
             subsonic_username=username,
             subsonic_token=token,
-            subsonic_salt=salt
+            subsonic_salt=salt,
+            email=email,
+            hashed_password=hashed_password
         )
 
         self.session.add(new_user)
@@ -44,3 +46,4 @@ class UserDAO:
                     )
         await self.session.execute(statement)
         await self.session.commit()
+        

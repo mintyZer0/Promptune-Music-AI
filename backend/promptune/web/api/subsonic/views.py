@@ -1,12 +1,18 @@
-from fastapi import APIRouter, HTTPException,  status
+from fastapi import APIRouter, HTTPException,  status, Depends
 from promptune.services.subsonic import SubsonicClient, SubsonicLoginDTO
 from httpx import RequestError
+from sqlalchemy import select
+from promptune.db.models.users import auth_cookie, get_jwt_strategy
+
+from promptune.db.dependencies import get_db_session
+from promptune.db.dao.user_dao import UserDAO
+from promptune.db.models.users import User
 
 router = APIRouter()
 
 
 @router.post("/login", status_code=status.HTTP_200_OK)
-async def login(payload:SubsonicLoginDTO):
+async def login(payload:SubsonicLoginDTO, user_dao:UserDAO = Depends() ):
     client = SubsonicClient.from_password(
         payload.server_url,
         payload.username,
@@ -26,5 +32,30 @@ async def login(payload:SubsonicLoginDTO):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password"
         )
+
+    # Check if user already exists 
+    print("make query")
+    user = await user_dao.get_by_username(payload.username)
+    print(user)
+    if user:
+        if payload.username == user.subsonic_username:
+            print("exists")
+            jwt_strategy = get_jwt_strategy()
+            return await auth_cookie.login(jwt_strategy, user)
+    # Create new user
+    else:
+        print("adding user")
+        return await user_dao.create_user(
+            server_url=payload.server_url,
+            username=payload.username,
+            token=client.token,
+            salt=client.salt,
+            email=f"{payload.username}@{payload.server_url.replace("http://","").replace("https://", "")}",
+            hashed_password="NOT_USED"
+            )
+
+            
+        
+
     
        
