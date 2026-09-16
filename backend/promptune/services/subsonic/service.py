@@ -26,36 +26,49 @@ class SubsonicClient:
         token = hashlib.md5((password + salt).encode("utf-8")).hexdigest()
         return cls(server_url=server_url, username=username, token=token, salt=salt)
 
-    def __build_params(self, username:str, token:str, salt:str):
+    def __build_params(self, extra_params:dict | None = None):
 
         params:dict = {
-            "u":username,
-            "t":token,
-            "s": salt,
+            "u":self.username,
+            "t":self.token,
+            "s": self.salt,
             "v": "1.16.1",
             "c": "PrompTune",
             "f": "json"
         }
-
+        if extra_params:
+            params.update(extra_params)
         return params
 
-    async def ping(self):
-        ping_params =  self.__build_params(self.username,self.token,self.salt)
-        url = f"{self.server_url}/rest/ping.view"
+    async def __get(self, endpoint:str, params: dict | None = None) -> dict:
+        """get request helper function"""
+        url = f"{self.server_url}/rest/{endpoint}"
+        created_params = self.__build_params(params)
+
         async with AsyncClient() as client:
-            response = await client.get(url, params=ping_params, timeout=5.0)
-            data = response.json()
-            response_status = data.get("subsonic-response", {}).get("status", {})
-            if response_status == "ok":
-                return True
-            else:
-                return False
+            try:
+                response: Response = await client.get(url, params=created_params, timeout=10.0)
+                response.raise_for_status()
+                data = response.json()
+                return data
+            except RequestError as e:
+                raise RuntimeError(f"Failed to connect to Navidrome: {e}")
+
+        
+    async def ping(self):
+        data = await self.__get("ping")
+        response_status = data.get("subsonic-response", {}).get("status", {})
+        if response_status == "ok":
+            return True
+        else:
+            return False
 
     async def getArtists(self):
-        params = self.__build_params(self.username, self.token, self.salt)
-        url = f"{self.server_url}/rest/getArtists"
-
-        async with AsyncClient() as client:
-            response = await client.get(url, params=params)
-            data = response.json()
-            return data
+        data = await self.__get("getArtists")
+        print(data)
+        index_list = data.get("subsonic-response", {}).get("artists", {}).get("index", [])
+        artists = []
+        for group in index_list:
+            for artist in group.get("artist"):
+                artists.append({"id":artist.get("id"), "name":artist.get("name")})
+        return artists

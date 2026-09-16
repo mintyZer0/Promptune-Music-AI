@@ -57,9 +57,7 @@ async def get_artists(
     client: SubsonicClient = Depends(create_subsonic_client) 
     ):
 
-    artists = await client.getArtists()
-
-    return artists
+    return await client.getArtists()
 
 
     
