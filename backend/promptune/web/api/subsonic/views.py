@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException,  status, Depends
-from promptune.services.subsonic import SubsonicClient, SubsonicLoginDTO
+from promptune.services.subsonic import SubsonicClient, SubsonicLoginDTO, create_subsonic_client
 from httpx import RequestError
-from promptune.db.models.users import auth_cookie, get_jwt_strategy
-
+from promptune.db.models.users import auth_cookie, get_jwt_strategy, current_active_user, User
 from promptune.db.dao.user_dao import UserDAO
+from promptune.db.dao.music_dao import MusicLibraryDAO
 router = APIRouter()
 
 
@@ -50,8 +50,21 @@ async def login(payload:SubsonicLoginDTO, user_dao:UserDAO = Depends() ):
             hashed_password="NOT_USED"
             )
 
-            
-        
+@router.get("/artists")   
+async def get_artists(
+    user: User = Depends(current_active_user),
+    music_dao: MusicLibraryDAO = Depends(),
+    client: SubsonicClient = Depends(create_subsonic_client) 
+    ):
+
+    artists = await client.getArtists()
+
+    return artists
+
 
     
+    
+
+        
+
        

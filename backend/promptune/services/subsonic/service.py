@@ -50,3 +50,12 @@ class SubsonicClient:
                 return True
             else:
                 return False
+
+    async def getArtists(self):
+        params = self.__build_params(self.username, self.token, self.salt)
+        url = f"{self.server_url}/rest/getArtists"
+
+        async with AsyncClient() as client:
+            response = await client.get(url, params=params)
+            data = response.json()
+            return data
