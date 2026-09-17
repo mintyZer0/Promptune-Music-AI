@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from promptune.db.dependencies import get_db_session
 from promptune.db.models.music import Artist, Album, Track
-from typing import Optional
+from typing import Optional, TypedDict
+
 
 class MusicLibraryDAO:
     """Class for music library database operations."""
@@ -18,41 +19,29 @@ class MusicLibraryDAO:
             name=name,
             subsonic_id=subsonic_id
         )
-
         self.session.add(new_artist)
+
+    async def insert_artists(self, artist_data: list[dict[str, str]]):
+        """Batch insert artists into database"""
+        artists = [
+            Artist(name=artist["name"], subsonic_id=artist["subsonic_id"]) for artist in artist_data
+        ]
+        self.session.add_all(artists)
         
+    async def insert_albums(self, album_data: list[dict[str, str]]):
+        """Batch insert albums"""
+        result = await self.session.execute(select(Artist.subsonic_id, Artist.id))
+        artist_map = dict(result.all())
+        # Match the artist_id via artist_map, use subonic id as key then match artist_id value
+        albums = [
+            Album(
+                subsonic_id=album.get("id"), 
+                artist_id=artist_map.get(album.get("artist_id")), 
+                title=album.get("name"),
+                release_date=album.get("year")
+                )
+                for album in album_data   
+        ]
 
-    # async def get_by_username(self, username:str) ->  User | None:
-    #     """Find a user by their username"""
-    #     query = select(User).where(User.subsonic_username == username)
-    #     result = await self.session.execute(query)
-    #     return result.scalar_one_or_none()
+        self.session.add_all(albums)
 
-    # async def create_user(self, server_url:str, username:str, token:str, salt:str, email:str, hashed_password:str) -> None:
-    #     new_user = User(
-    #         subsonic_server_url=server_url,
-    #         subsonic_username=username,
-    #         subsonic_token=token,
-    #         subsonic_salt=salt,
-    #         email=email,
-    #         hashed_password=hashed_password
-    #     )
-
-    #     self.session.add(new_user)
-
-    #     await self.session.commit()
-
-
-    # async def update_user(self, server_url:str, username:str, token:str, salt:str) -> None:
-    #     statement = (update(User)
-    #                  .where(User.subsonic_username == username)
-    #                  .values(
-    #                     subsonic_server_url=server_url,
-    #                     subsonic_username=username,
-    #                     subsonic_token=token,
-    #                     subsonic_salt=salt
-    #                     )
-    #                 )
-    #     await self.session.execute(statement)
-    #     await self.session.commit()
-        

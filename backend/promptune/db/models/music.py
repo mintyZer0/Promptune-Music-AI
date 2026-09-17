@@ -27,7 +27,7 @@ class Album(Base):
     __tablename__ = "albums"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     subsonic_id: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False )
-    artist_id: Mapped[int] = mapped_column(
+    artist_id: Mapped[str] = mapped_column(
         ForeignKey("artists.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

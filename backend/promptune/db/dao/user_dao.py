@@ -31,7 +31,6 @@ class UserDAO:
 
         self.session.add(new_user)
 
-        await self.session.commit()
 
 
     async def update_user(self, server_url:str, username:str, token:str, salt:str) -> None:
@@ -45,5 +44,4 @@ class UserDAO:
                         )
                     )
         await self.session.execute(statement)
-        await self.session.commit()
         

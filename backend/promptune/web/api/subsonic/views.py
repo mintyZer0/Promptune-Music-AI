@@ -52,13 +52,17 @@ async def login(payload:SubsonicLoginDTO, user_dao:UserDAO = Depends() ):
 
 @router.get("/artists")   
 async def get_artists(
-    user: User = Depends(current_active_user),
-    music_dao: MusicLibraryDAO = Depends(),
     client: SubsonicClient = Depends(create_subsonic_client) 
     ):
 
-    return await client.getArtists()
+    return await client.get_artists()
 
+@router.get("/albums")
+async def get_albums(
+    client: SubsonicClient = Depends(create_subsonic_client) 
+    ):
+
+    return await client.get_albums()
 
     
     

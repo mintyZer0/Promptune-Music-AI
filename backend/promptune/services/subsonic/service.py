@@ -63,12 +63,36 @@ class SubsonicClient:
         else:
             return False
 
-    async def getArtists(self):
+    async def get_artists(self):
         data = await self.__get("getArtists")
-        print(data)
         index_list = data.get("subsonic-response", {}).get("artists", {}).get("index", [])
         artists = []
         for group in index_list:
             for artist in group.get("artist"):
                 artists.append({"id":artist.get("id"), "name":artist.get("name")})
         return artists
+
+    async def get_albums(self, size: int = 500):
+        all_albums = []
+        offset = 0
+
+        while True:
+            data = await self.__get("getAlbumList2", {"type":"alphabeticalByName",
+                                                       "size": size,
+                                                       "offset": offset
+                                                       })
+            
+            if not data:
+                break
+
+            albums = [album for album in data.get("subsonic-response", {}).get("albumList2", {}).get("album", [])]
+            all_albums.extend(albums)
+            offset += len(albums)
+
+            # no more albums if less then offset
+            if len(albums) < offset:
+                break
+
+        print(len(all_albums))
+        return all_albums
+            
