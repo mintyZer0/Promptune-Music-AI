@@ -4,6 +4,7 @@ import hashlib
 from httpx import AsyncClient, RequestError, Response
 from pydantic import BaseModel
 from fastapi import HTTPException, status
+import asyncio
 class SubsonicLoginDTO(BaseModel):
     server_url: str
     username: str
@@ -17,6 +18,7 @@ class SubsonicClient:
         self.username = username
         self.token = token
         self.salt = salt
+        self.sephamore = asyncio.Semaphore(3)
 
     
     @classmethod
@@ -45,14 +47,15 @@ class SubsonicClient:
         url = f"{self.server_url}/rest/{endpoint}"
         created_params = self.__build_params(params)
 
-        async with AsyncClient() as client:
-            try:
-                response: Response = await client.get(url, params=created_params, timeout=10.0)
-                response.raise_for_status()
-                data = response.json()
-                return data
-            except RequestError as e:
-                raise RuntimeError(f"Failed to connect to Navidrome: {e}")
+        async with self.sephamore:
+            async with AsyncClient() as client:
+                try:
+                        response: Response = await client.get(url, params=created_params, timeout=10.0)
+                        response.raise_for_status()
+                        data = response.json()
+                        return data
+                except RequestError as e:
+                    raise RuntimeError(f"Failed to connect to Navidrome: {e}")
 
         
     async def ping(self):
@@ -95,4 +98,16 @@ class SubsonicClient:
 
         print(len(all_albums))
         return all_albums
-            
+
+
+    async def get_tracks(self):
+        albums = await self.get_albums(500)
+        semaphore = asyncio.Semaphore(10)
+
+        album_ids = [album.get("id") for album in albums]
+
+        tasks = [self.__get("getAlbum", {"id":album_id}) for album_id in album_ids]
+
+        tracks = await asyncio.gather(*tasks) 
+
+        return tracks

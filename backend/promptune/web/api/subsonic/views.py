@@ -64,6 +64,13 @@ async def get_albums(
 
     return await client.get_albums()
 
+@router.get("/tracks")
+async def get_tracks(
+    client: SubsonicClient = Depends(create_subsonic_client)
+    ):
+
+    return await client.get_tracks()
+    
     
     
 
