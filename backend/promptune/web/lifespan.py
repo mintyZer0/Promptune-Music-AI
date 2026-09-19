@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from httpx import AsyncClient
 
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -45,6 +46,7 @@ async def lifespan_setup(
     _setup_db(app)
     init_redis(app)
     app.middleware_stack = app.build_middleware_stack()
+    app.state.http_client = AsyncClient(timeout=15.0)
 
     yield
     await app.state.db_engine.dispose()

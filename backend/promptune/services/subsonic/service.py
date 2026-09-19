@@ -3,7 +3,7 @@ import secrets
 import hashlib
 from httpx import AsyncClient, RequestError, Response
 from pydantic import BaseModel
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Request
 import asyncio
 class SubsonicLoginDTO(BaseModel):
     server_url: str
@@ -13,11 +13,12 @@ class SubsonicLoginDTO(BaseModel):
 
 class SubsonicClient:
 
-    def __init__(self, server_url:str, username:str, token:str, salt:str) -> None:
+    def __init__(self, server_url:str, username:str, token:str, salt:str, client: AsyncClient) -> None:
         self.server_url = server_url.rstrip("/")
         self.username = username
         self.token = token
         self.salt = salt
+        self.client = client
         self.sephamore = asyncio.Semaphore(3)
 
     
@@ -48,14 +49,17 @@ class SubsonicClient:
         created_params = self.__build_params(params)
 
         async with self.sephamore:
-            async with AsyncClient() as client:
+            for attempt in range(3):
                 try:
-                        response: Response = await client.get(url, params=created_params, timeout=10.0)
-                        response.raise_for_status()
-                        data = response.json()
-                        return data
+                                    response: Response = await self.client.get(url, params=created_params, timeout=15.0)
+                                    response.raise_for_status()
+                                    data = response.json()
+                                    return data
                 except RequestError as e:
-                    raise RuntimeError(f"Failed to connect to Navidrome: {e}")
+                    if attempt == 3:
+                        raise RuntimeError(f"Failed to connect to Navidrome: {e}")
+                    asyncio.sleep(0.5)
+
 
         
     async def ping(self):
@@ -93,7 +97,7 @@ class SubsonicClient:
             offset += len(albums)
 
             # no more albums if less then offset
-            if len(albums) < offset:
+            if len(albums) < size:
                 break
 
         print(len(all_albums))
@@ -102,12 +106,10 @@ class SubsonicClient:
 
     async def get_tracks(self):
         albums = await self.get_albums(500)
-        semaphore = asyncio.Semaphore(10)
 
         album_ids = [album.get("id") for album in albums]
 
         tasks = [self.__get("getAlbum", {"id":album_id}) for album_id in album_ids]
-
         tracks = await asyncio.gather(*tasks) 
-
+        
         return tracks
