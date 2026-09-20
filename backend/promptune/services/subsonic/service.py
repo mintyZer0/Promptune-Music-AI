@@ -110,6 +110,12 @@ class SubsonicClient:
         album_ids = [album.get("id") for album in albums]
 
         tasks = [self.__get("getAlbum", {"id":album_id}) for album_id in album_ids]
-        tracks = await asyncio.gather(*tasks) 
-        
+        tracks_responses = await asyncio.gather(*tasks)
+
+        tracks = [
+             track
+             for res in tracks_responses
+             for track in res.get("subsonic-response", {}).get("album", {}).get("song", [])
+        ]
+
         return tracks
