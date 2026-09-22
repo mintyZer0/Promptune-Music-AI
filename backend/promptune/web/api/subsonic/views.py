@@ -70,6 +70,23 @@ async def get_tracks(
     ):
 
     return await client.get_tracks()
+
+@router.post("/sync")
+async def sync(
+    client: SubsonicClient = Depends(create_subsonic_client),
+    music_dao: MusicLibraryDAO = Depends()
+    ):
+
+    artists = await client.get_artists()
+    albums = await client.get_albums()
+    tracks = await client.get_tracks()
+
+    await music_dao.clear_library()
+
+    await music_dao.insert_artists(artist_data=artists)
+    await music_dao.insert_albums(album_data=albums)
+    await music_dao.insert_tracks(tracks_data=tracks)
+    
     
     
     

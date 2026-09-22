@@ -46,7 +46,7 @@ class Track(Base):
     subsonic_id: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False )
     artist_id: Mapped[int] = mapped_column(
         ForeignKey("artists.id"),
-        nullable=False,
+        nullable=True,
         index=True
     )
     album_id: Mapped[int] = mapped_column(

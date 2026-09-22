@@ -1,5 +1,5 @@
 from fastapi import Depends
-from sqlalchemy import select, update, insert
+from sqlalchemy import select, update, insert, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from promptune.db.dependencies import get_db_session
@@ -21,14 +21,14 @@ class MusicLibraryDAO:
         )
         self.session.add(new_artist)
 
-    async def insert_artists(self, artist_data: list[dict[str, str]]):
+    async def insert_artists(self, artist_data: list[dict[str, str]]) -> None:
         """Batch insert artists into database"""
         artists = [
-            Artist(name=artist["name"], subsonic_id=artist["subsonic_id"]) for artist in artist_data
+            Artist(name=artist.get("name"), subsonic_id=artist.get("id")) for artist in artist_data
         ]
         self.session.add_all(artists)
         
-    async def insert_albums(self, album_data: list[dict[str, str]]):
+    async def insert_albums(self, album_data: list[dict[str, str]]) -> None:
         """Batch insert albums"""
         result = await self.session.execute(select(Artist.subsonic_id, Artist.id))
         artist_map = dict(result.all())
@@ -36,12 +36,48 @@ class MusicLibraryDAO:
         albums = [
             Album(
                 subsonic_id=album.get("id"), 
-                artist_id=artist_map.get(album.get("artist_id")), 
+                artist_id=artist_map.get(album.get("artistId")), 
                 title=album.get("name"),
-                release_date=album.get("year")
+                release=album.get("year")
                 )
                 for album in album_data   
         ]
 
         self.session.add_all(albums)
+
+    
+    async def insert_tracks(self, tracks_data: list[dict[str,str]]) -> None:
+        result = await self.session.execute(select(Artist.subsonic_id, Artist.id))
+        artist_map = dict(result.all())
+
+        # For tracks that have ids that's not in the artist database (e.g. collaborators)
+        result = await self.session.execute(select(Album.subsonic_id, Album.artist_id))
+        album_artist_map = dict(result.all())
+
+        result = await self.session.execute(select(Album.subsonic_id, Album.id))
+        album_map = dict(result.all())
+
+        tracks = [
+            Track(
+                subsonic_id=track.get("id"),
+                artist_id=artist_map.get(track.get("artistId")) or album_artist_map.get(track.get("albumId")),
+                album_id=album_map.get(track.get("albumId")),
+                title=track.get("title"),
+                duration_seconds=track.get("duration")
+            )
+
+            for track in tracks_data
+        ]
+
+        self.session.add_all(tracks)
+
+
+    async def clear_library(self) -> None:
+        """Deletes entire library"""
+
+        await self.session.execute(delete(Track))
+        await self.session.execute(delete(Album))
+        await self.session.execute(delete(Artist))
+        await self.session.flush()
+
 
