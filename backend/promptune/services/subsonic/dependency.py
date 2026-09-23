@@ -1,4 +1,4 @@
-from fastapi import Depends, requests, Request
+from fastapi import Depends, Request
 from promptune.db.models.users import User, current_active_user
 from promptune.services.subsonic import SubsonicClient
 
@@ -8,5 +8,5 @@ def create_subsonic_client(request: Request, user: User = Depends(current_active
                           username=user.subsonic_username,
                           token=user.subsonic_token,
                           salt=user.subsonic_salt,
-                          client=client
+                          async_client=client
                           )

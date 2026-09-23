@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException,  status, Depends
+from fastapi import APIRouter, HTTPException,  status, Depends, Request
 from promptune.services.subsonic import SubsonicClient, SubsonicLoginDTO, create_subsonic_client
 from httpx import RequestError
 from promptune.db.models.users import auth_cookie, get_jwt_strategy, current_active_user, User
@@ -8,11 +8,13 @@ router = APIRouter()
 
 
 @router.post("/login", status_code=status.HTTP_200_OK)
-async def login(payload:SubsonicLoginDTO, user_dao:UserDAO = Depends() ):
+async def login(request:Request, payload:SubsonicLoginDTO, user_dao:UserDAO = Depends()):
+    async_client = request.app.state.http_client
     client = SubsonicClient.from_password(
-        payload.server_url,
-        payload.username,
-        payload.password
+        server_url=payload.server_url,
+        username=payload.username,
+        password=payload.password,
+        async_client=async_client
         )
     try:
         is_valid = await client.ping()
@@ -71,6 +73,28 @@ async def get_tracks(
 
     return await client.get_tracks()
 
+@router.get("/playlists")
+async def get_playlists(
+    client: SubsonicClient = Depends(create_subsonic_client)
+    ):
+
+    return await client.get_playlists()
+
+@router.get("/playlist")
+async def get_playlists(
+    id: str,
+    client: SubsonicClient = Depends(create_subsonic_client)
+    ):
+
+    return await client.get_playlist(id=id)
+     
+@router.get("/playlists-with-tracks")
+async def get_playlist_tracks(
+    client: SubsonicClient = Depends(create_subsonic_client)
+    ):
+
+    return await client.get_playlists_with_tracks()
+
 @router.post("/sync")
 async def sync(
     client: SubsonicClient = Depends(create_subsonic_client),
@@ -80,12 +104,16 @@ async def sync(
     artists = await client.get_artists()
     albums = await client.get_albums()
     tracks = await client.get_tracks()
+    playlists = await client.get_playlists()
+    playlist_tracks = await client.get_playlists_with_tracks()
 
     await music_dao.clear_library()
 
     await music_dao.insert_artists(artist_data=artists)
     await music_dao.insert_albums(album_data=albums)
     await music_dao.insert_tracks(tracks_data=tracks)
+    await music_dao.insert_playlists(playlist_data=playlists)
+    await music_dao.insert_playlist_tracks(playlists_with_tracks_data=playlist_tracks)
     
     
     

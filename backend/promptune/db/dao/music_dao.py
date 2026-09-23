@@ -3,7 +3,7 @@ from sqlalchemy import select, update, insert, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from promptune.db.dependencies import get_db_session
-from promptune.db.models.music import Artist, Album, Track
+from promptune.db.models.music import Artist, Album, Track, Playlist, Playlist_Track
 from typing import Optional, TypedDict
 
 
@@ -71,6 +71,42 @@ class MusicLibraryDAO:
 
         self.session.add_all(tracks)
 
+    async def insert_playlists(self, playlist_data: list[dict[str,str]]):
+
+        playlists = [
+            Playlist(
+                subsonic_id=playlist.get("id"),
+                name=playlist.get("name"),
+                song_count=playlist.get("songCount"),
+                duration_seconds=playlist.get("duration"),
+                created=playlist.get("created")
+                )
+            for playlist in playlist_data
+        ]
+
+        self.session.add_all(playlists)
+
+
+    async def insert_playlist_tracks(self, playlists_with_tracks_data: list[dict[str,str]]):
+        result = await  self.session.execute(select(Track.subsonic_id, Track.id))
+        tracks_map = dict(result.all())
+
+        result = await self.session.execute(select(Playlist.subsonic_id, Playlist.id))
+        playlist_map = dict(result.all())
+
+        playlist_tracks = [
+            Playlist_Track(
+                playlist_id=playlist_map.get(playlist.get("id")),
+                track_id=tracks_map.get(playlist_track.get("id")),
+                position=playlist_track.get("track"),
+                )
+            for playlist in playlists_with_tracks_data
+            for playlist_track in playlist.get("entry")
+        ]    
+
+        self.session.add_all(playlist_tracks)
+
+
 
     async def clear_library(self) -> None:
         """Deletes entire library"""
@@ -78,6 +114,8 @@ class MusicLibraryDAO:
         await self.session.execute(delete(Track))
         await self.session.execute(delete(Album))
         await self.session.execute(delete(Artist))
+        await self.session.execute(delete(Playlist))
+        await self.session.execute(delete(Playlist_Track))
         await self.session.flush()
 
 

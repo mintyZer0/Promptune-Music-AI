@@ -38,6 +38,17 @@ class Album(Base):
     #Relationships
     artist: Mapped["Artist"] = relationship(back_populates="albums")
     tracks: Mapped[list["Track"]] = relationship(back_populates="album")
+
+class Playlist(Base):
+    __tablename__ = "playlists"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subsonic_id: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False )
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    song_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    duration_seconds: Mapped[int] = mapped_column(Integer, default=0)
+    created: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    #Relationships
+    tracks: Mapped["Playlist_Track"] = relationship(back_populates="playlist")
     
 
 class Track(Base):
@@ -59,3 +70,18 @@ class Track(Base):
     #Relationships
     album: Mapped["Album"] = relationship(back_populates="tracks")
     artist: Mapped["Artist"] = relationship(back_populates="tracks")    
+
+class Playlist_Track(Base):
+    __tablename__ = "playlist_tracks"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    playlist_id: Mapped[int] = mapped_column(
+        ForeignKey("playlists.id", ondelete="cascade"),
+        nullable=False,
+        )
+    track_id: Mapped[int] = mapped_column(
+        ForeignKey("tracks.id", ondelete="cascade"),
+        nullable=False,
+        )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    #Relationships
+    playlist: Mapped["Playlist"] = relationship(back_populates="tracks")

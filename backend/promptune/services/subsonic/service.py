@@ -13,21 +13,21 @@ class SubsonicLoginDTO(BaseModel):
 
 class SubsonicClient:
 
-    def __init__(self, server_url:str, username:str, token:str, salt:str, client: AsyncClient) -> None:
+    def __init__(self, server_url:str, username:str, token:str, salt:str, async_client: AsyncClient) -> None:
         self.server_url = server_url.rstrip("/")
         self.username = username
         self.token = token
         self.salt = salt
-        self.client = client
+        self.client = async_client
         self.sephamore = asyncio.Semaphore(3)
 
     
     @classmethod
-    def from_password(cls,server_url:str, username:str, password:str):
+    def from_password(cls,server_url:str, username:str, password:str, async_client:AsyncClient):
         salt:str = secrets.token_hex(6)
         # Convert to byte by encoding
         token = hashlib.md5((password + salt).encode("utf-8")).hexdigest()
-        return cls(server_url=server_url, username=username, token=token, salt=salt)
+        return cls(server_url=server_url, username=username, token=token, salt=salt, async_client=async_client)
 
     def __build_params(self, extra_params:dict | None = None):
 
@@ -58,7 +58,7 @@ class SubsonicClient:
                 except RequestError as e:
                     if attempt == 3:
                         raise RuntimeError(f"Failed to connect to Navidrome: {e}")
-                    asyncio.sleep(0.5)
+                    await asyncio.sleep(0.5)
 
 
         
@@ -119,3 +119,30 @@ class SubsonicClient:
         ]
 
         return tracks
+
+    async def get_playlists(self):
+        """Returns a list of playlists"""
+        response = await self.__get("getPlaylists")
+        playlists = response.get("subsonic-response", {}).get("playlists", {}).get("playlist", [])
+
+        return playlists
+
+    async def get_playlist(self, id: str):
+         """Returns a playlist and its tracks"""
+         response = await self.__get("getPlaylist", {"id": id})
+
+         return response
+
+    async def get_playlists_with_tracks(self):
+         """Returns a list of playlists tracks"""
+
+         response = await self.get_playlists()
+         playlist_ids = [id.get("id") for id in response]
+
+         tasks = [self.get_playlist(id) for id in playlist_ids]
+         response = await asyncio.gather(*tasks)
+
+         playlists_with_tracks = [playlist.get("subsonic-response").get("playlist") for playlist in response]
+
+         return playlists_with_tracks
+
