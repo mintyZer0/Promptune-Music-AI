@@ -23,6 +23,7 @@ dependencies = [
   "httptools >=0.7.1,<1",
   "pymongo >=4.15.4,<5",
   "loguru >=0.7.3,<1",
+  "google-genai>=2.25.0",
 ]
 
 [dependency-groups]
@@ -127,11 +128,11 @@ lint.ignore = [
     "D106",    # Missing docstring in public nested class
     "UP043",   # Unnecessary default argument specified (conflicts with mypy).
 ]
+lint.mccabe = { max-complexity = 10 }
 exclude = [
     "promptune/db/migrations",
     ".venv/"
 ]
-lint.mccabe = { max-complexity = 10 }
 line-length = 88
 
 [tool.ruff.lint.per-file-ignores]
